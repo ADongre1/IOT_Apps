@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport"
+	content="initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta http-equiv="X-UA-Compatible" content="IE=8,IE=9,IE=10,IE=11,IE=edge" />
+<title>CATCO-DSS MOW Navigation</title>
+<link rel="icon" type="image/ico" href="../../images/flag_icon.ico">
+<link rel="stylesheet"
+	href="mow_mobile.css">
+<link type="text/css" rel="stylesheet"
+	href="esri.css">
+<!-- <link rel="stylesheet" type="text/css" -->
+<!-- 	href="//js.arcgis.com/3.20/esri/css/esri.css"> -->
+	
+<link rel="stylesheet" type="text/css"
+	href="../../../dojo1.10.4/dojox/mobile/themes/iphone/iphone.css">
+	<link rel="stylesheet" type="text/css"
+	href="../../../dojo1.10.4/dijit/themes/soria/soria.css">
+
+<script
+	data-dojo-config="async: true,
+   packages: [ {
+    name: 'nav',
+   location: location.pathname.replace(/\/[^/]+$/, '') + 'modules/nav'
+   },{
+    name: 'map',
+   location: location.pathname.replace(/\/[^/]+$/, '') + 'modules/map'
+   }
+   ]"
+	src="https://js.arcgis.com/3.23compact/" type="text/javascript"></script>
+
+<script src="Main.js?20180416" type="text/javascript"></script>
+
+</head>
+<body class="soria" style="height:100%;width:100%">
+<script>
+function firstSpeak(){
+	window.speechSynthesis.speak(new SpeechSynthesisUtterance(" "));
+}
+</script>
+<div id="routeListView" data-dojo-type="dojox/mobile/View" >
+  <h1 data-dojo-type="dojox/mobile/Heading" data-dojo-props='fixed:"top"'>Pick MOW Route</h1>
+  	<div id="routeListPane"  data-dojo-type="dojox/mobile/ScrollablePane">
+		<div id="routeList"></div>
+	</div>	
+	
+</div>
+<div id="clientsListView" data-dojo-type="dojox/mobile/View" >
+	<div id="clientsHeader"></div>
+	<div id="clientsListPane"  data-dojo-type="dojox/mobile/ScrollablePane">
+		<div id="clientList" onClick="firstSpeak()"></div>
+	</div>
+	
+</div>
+<div id="directionsView" data-dojo-type="dojox/mobile/View" style="height:100%; width:100%;">
+	<div id='directionsHeader' style="font-size:12pt;">	
+		<div id="refreshButton" data-dojo-type="dojox/mobile/ToolBarButton" style="position:absolute; right:5px;font-size:9pt;" data-dojo-props='label:"Refresh"'></div>
+	</div>
+	<div id="mapCP" data-dojo-type="dojox/mobile/ContentPane" style="height:100%; width:100%;">
+		<div id='mapDiv' data-dojo-type="dojox/mobile/ContentPane"  style="height:100%; width:100%;"></div>	
+	</div>
+	<div id="synthPane"
+	onClick="speak()" data-dojo-type="dojox/mobile/ContentPane" style="text-align:center; font-size: 16pt;font-weight:bold">Directions loading.</div>
+</div>
+
+<script>
+function speak(){
+	var speechUtterance = new SpeechSynthesisUtterance();
+	speechUtterance.text = window.directions;
+	if(navigator.userAgent.match(/Android/i)) {
+		speechUtterance.rate = 0.9;
+		}	
+	else{
+		speechUtterance.rate = 0.9;
+	}
+	
+	window.speechSynthesis.speak(speechUtterance);
+}
+</script>
+</body>
+</html>

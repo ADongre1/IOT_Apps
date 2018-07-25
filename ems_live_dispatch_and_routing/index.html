@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport"
+	content="width=device-width; initial-scale=1.0;  user-scalable=0;" />
+<meta http-equiv="X-UA-Compatible"
+	content="IE=8,IE=9,IE=10,IE=11,IE=edge" />
+
+<title>CATCO-EMS Dispatch</title>
+
+<link rel="stylesheet"
+	href="//js.arcgis.com/3.23/esri/css/esri.css">
+<link rel="stylesheet"
+	href="//js.arcgis.com/3.23/dijit/themes/soria/soria.css">
+<link rel="stylesheet" type="text/css" href="dispatchplanner.css">
+<link rel="stylesheet"
+	href="//cdn.rawgit.com/SitePen/dgrid/v1.0.0/css/dgrid.css">
+<link rel="stylesheet" type="text/css"
+	href="../../dojo1.10.4/cbtree/themes/soria/soria.css">
+<script
+	data-dojo-config="async: 1, dojoBlankHtmlUrl: '../../dojo1.10.4/dojo/resources/blank.html',packages: [ {
+        name: 'dgrid',
+        location: 'https://cdn.rawgit.com/SitePen/dgrid/v1.0.0'
+    },
+    {
+    name: 'cbtree',
+   location: location.pathname.replace(/\/[^/]+$/, '') + '../../dojo1.10.4/cbtree'
+   },
+    {name:'socketio',
+   location:   location.pathname.replace(/\/[^/]+$/, '') + '../../socketio/dist'
+   }]"
+	data-dojo-config="async: true" src="//js.arcgis.com/3.23/"
+	type="text/javascript">
+</script>
+
+
+<script src="dispatchplannerIO.min.js?20180524" type="text/javascript"></script>
+<link rel="icon"
+	href="https://arcgis2.catawbacountync.gov/images/flag_icon.ico"
+	type="image/ico">
+</head>
+<body class="soria">
+	<div id="borderContainer" data-dojo-type="dijit.layout.BorderContainer"
+		style="width: 98%; height: 99%"
+		data-dojo-props="design:'headline', gutters:false">
+
+<!-- 		<div id="topPane" data-dojo-type="dijit.layout.ContentPane" -->
+<!-- 			style="height: 4%; overflow: hidden; padding-bottom: 10px; padding-top: 5px;" -->
+<!-- 			data-dojo-props="region:'top'"> -->
+<!-- 			<img src="../../images/title_ems.png" style="width: 25vh; margin-left: 1vw;" alt=""> -->
+<!-- 			<b><font size="4pt">EMS Dispatch Planner</font></b> -->
+<!-- 		</div> -->
+		<div id="leftPane" data-dojo-type="dijit/layout/ContentPane"
+			data-dojo-props="region:'left',splitter:true"
+			style="margin-left: 1vw; height: 85%; width: 14%">
+			<div data-dojo-type="dijit/layout/TabContainer" style="height: 85%;">
+
+				<div id="Dispatch" style="height: 100%; width: 12%"
+					data-dojo-type="dijit/layout/ContentPane"
+					data-dojo-props="title:'Dispatch'">
+					<div id="dispatchAddressTitle">Nearest Available by Address:</div>
+					<div id='addressRouteSearch'></div>
+					<div id='routeAddress'></div>
+					<p></p>
+					<div id="dispatchIntsxTitle">Nearest Available by Intersection:</div>
+
+					<div id="stIntRouteSearch"></div>
+					<div id='stIntsSelected'></div>
+				
+					<div id="intersectionCount"></div>
+					<div id="nearestUnit"></div>
+				
+					<div id="nearestCarRouteButton"></div>
+					<div id="resetNearestUnitButton"></div>
+					<div id=unitSelectTitle style="text-align:center;margin-top:3vh">
+						<b>Select Units for AVL Stream</b>
+						<br>
+					(left click to zoom)
+					</div>					
+					<div data-dojo-type="dijit/form/MultiSelect" data-dojo-props="id:'carDispatchSelect'" id='carDispatchSelect' 
+					style="height: 35vh; width: 6vw; margin-left: 20%; font-size: 12pt;" >					
+   						 <option value="3M1" selected="selected">3M1</option>
+  					     <option value="3M2" selected="selected">3M2</option>
+  					     <option value="3M3" selected="selected">3M3</option>
+  					     <option value="3M4" selected="selected">3M4</option>
+  					     <option value="3M5" selected="selected">3M5</option>
+  					     <option value="3M6" selected="selected">3M6</option>
+  					     <option value="3M7" selected="selected">3M7</option>
+  					     <option value="3M8" selected="selected">3M8</option>
+  					     <option value="3M9" selected="selected">3M9</option>
+  					     <option value="3M10" selected="selected">3M10</option>
+  					     <option value="3M11" selected="selected">3M11</option>
+  					     <option value="3M12" selected="selected">3M12</option>
+  					     <option value="3M42" selected="selected">3M42</option>
+  					     <option value="3M45" selected="selected">3M45</option>
+  					     <option value="3M46" selected="selected">3M46</option>					
+					</div>
+					<div id="dispatchInfo" style="margin-left:10%; margin-top:3vh;">
+					<b>Unit Incident Information:</b>
+					<br>(click unit on map)
+					<div id ="dispatchInfoUnit"><b>Unit:</b></div>
+					<div id ="dispatchInfoOCANum"><b>OCA:</b></div>
+					</div>
+				</div>
+				<div id="Calls" style="height: 100%; width: 12%"
+					data-dojo-type="dijit/layout/ContentPane"
+					data-dojo-props="title:'Call Info'">
+				Select Call for Unit Time Infos
+				<br>
+				<div id="callInfoSelect"></div>	
+				<div id="unitCallInfo"></div>				
+				</div>
+				<div id="layerTreeContentPane" style="height: 100%; width: 12%"
+					data-dojo-type="dijit.layout.ContentPane"
+					data-dojo-props="title:'Layers'"></div>
+				<div id="PrintPane" style="height: 100%; width: 12%"
+					data-dojo-type="dijit.layout.ContentPane"
+					data-dojo-props="title:'Print'">
+					<p>
+					<div id="print" style="float: left; margin-top: 1vh;"></div>
+					<p>
+<!-- 					<div id="pdfLayoutCB"></div> -->
+<!-- 					Print Frame -->
+<!-- 					<p> -->
+					<b>Layout Type:</b>
+					<div id="templateSelect"></div>
+					<p> 
+					<b>PDF Map Title:</b>
+					<div id="pdfTitleTB"></div>
+					<p>
+					<div id="screenshotButton"></div>
+
+				</div>
+
+			</div>
+			<p>
+				<!-- 			<div id = 'GPSCoordInfo' style="font-size:10pt;"> -->
+				<!-- 			GPS data with speeds equaling 0 or greater than 100 are not -->
+				<!-- 				included. Coordinates displayed in NC State Plane Feet. -->
+				<!-- 			</div> -->
+				<!-- 			<div id="coords" style="margin-top: 0.5vh; margin-left: 3vw;"></div> -->
+			</p>
+		</div>
+
+		<div data-dojo-type="dijit.layout.ContentPane" id="mapPane"
+			data-dojo-props="region:'center'"
+			style="border: solid; border-width: 1px; border-color: #B1BADF; position: relative; font-size:11pt;">
+			<div id="navToolbar" data-dojo-type="dijit/Toolbar">
+				<div data-dojo-type="dijit/form/Button" id="zoomin"
+					data-dojo-props="iconClass:'zoominIcon'">Zoom In</div>
+				<div data-dojo-type="dijit/form/Button" id="zoomout"
+					data-dojo-props="iconClass:'zoomoutIcon'">Zoom Out</div>
+				<div data-dojo-type="dijit/form/Button" id="zoomfullext"
+					data-dojo-props="iconClass:'zoomfullextIcon'">Full Extent</div>
+				<div data-dojo-type="dijit/form/Button" id="zoomprev"
+					data-dojo-props="iconClass:'zoomprevIcon'">Prev Extent</div>
+				<div data-dojo-type="dijit/form/Button" id="zoomnext"
+					data-dojo-props="iconClass:'zoomnextIcon'">Next Extent</div>
+				<div data-dojo-type="dijit/form/Button" id="pan"
+					data-dojo-props="iconClass:'panIcon'">Pan</div>
+				<div id="addressSearch"></div>
+				<div id="dispatchCB" data-dojo-type="dijit/form/CheckBox"></div>
+				<font weight="bold"><b>AVL Stream</b>
+				<div id="cadIncidentsCB" data-dojo-type="dijit/form/CheckBox"></div>
+				<b>Active Incidents</b>
+
+			</div>
+			<div id="mapDiv" data-dojo-type="dijit.layout.ContentPane"
+				style="height: 97%;"></div>
+
+		</div>
+		<div data-dojo-type="dijit.layout.ContentPane" id="rightPane"
+			data-dojo-props="region:'right',splitter:true"
+			style="width: 20%; height: 85%;">
+			
+			<div data-dojo-type="dijit/layout/TabContainer" style="overflow: hidden;">
+
+				<div id="queryContentPane" 
+					data-dojo-type="dijit/layout/ContentPane"
+					data-dojo-props="title:'AVL Query'" style="margin-top: 2.5vh; padding-left: 3vh; padding-right: 2vh; overflow-y: hidden;">
+						
+						<div id="unitTitle" style="font-weight: bold;">Query Historic AVL Data</div>
+						<p>
+						Unit:
+						</p><div id="unitSelect"></div>
+						<br>Date:<br>						
+						<div id="moTB"></div>
+						<div id="dayTB"></div>
+						<div id="yearTB"></div>
+						<br> <br>(60 minutes or less) <br> Start Time:<br>
+						<div id="startHourTB"></div>
+						<div id="startMinTB"></div>
+						<br> <br> End Time:<br>
+						<div id="endHourTB"></div>
+						<div id="endMinTB"></div>
+						<p>
+						</p><div id="getDataButton"></div>
+						<p>
+						</p><div id="clearAVLButton"></div>
+						<p></p>
+						<div id="driveTime">
+							<b>AVL Drive Time (min.): </b>
+						</div>
+						<br>
+						<div id="modelAVLDT">
+							<b>Emg. Rush Hour DT Est. (min.): </b><br>
+						</div>
+						<br>
+						<div id="routeDistance">
+							<b>Distance (mi.): </b><br>
+						</div>											
+				</div>
+				
+				<div id="GPSData" style="height: 100%; width: 12%; overflow-y: hidden;"
+					data-dojo-type="dijit/layout/ContentPane"
+					data-dojo-props="title:'AVL Data'" style="position:relative">
+					<div id="dataGridHeader" style="width: 92%; height: 5%;"></div>
+					<div id="dataGrid" style="width: 100%; height: 98%; margin-top: -2vh;"></div>
+				</div>
+				<div id="routeContentPane" style="height: 10%; width: 12%; margin-top: 2.5vh;"
+					data-dojo-type="dijit/layout/ContentPane"
+					data-dojo-props="title:'Route Query'">
+					<div id="title"><b>Get Emg. Drive Time Estimate</b></div>
+					<p>
+					</p><div id="startRouteButton"></div>
+					
+					<div id="startPtText" style="margin-left: 4vh;"></div>
+					<p></p>
+					<div id="stopRouteButton"></div>
+					<div id="stopPtText" style="margin-left: 4vh;"></div>
+					<p></p>
+
+					<div id="getRouteButton"></div>
+					<p>(Drive Time is based on modeled emergency driving behaviour
+						during Rush Hour.)</p>
+					<p></p>
+					<div id="routeQueryDT">
+						<b>Estimated Drive Time (min.): </b>
+					</div>
+					<p></p>
+					<div id="routeQueryDistance">
+						<b>Approximate Distance(mi): </b>
+					</div>
+					<p></p>
+					<div id="clearRouteButton"></div>
+				</div>
+	
+			</div>
+		</div>
+
+<!-- 		<div id="footer" data-dojo-type="dijit/layout/ContentPane" -->
+<!-- 			data-dojo-props="region:'bottom'" style="height: 7%"> -->
+<!-- 			<font size="2pt"><center> -->
+<!-- 					&copy 2017, Catawba County Government, North Carolina. All rights -->
+<!-- 					reserved.<br> <a -->
+<!-- 						href="http://www.catawbacountync.gov/disclaimer.asp">Disclaimer</a> -->
+<!-- 					- <a href="http://www.catawbacountync.gov/privacy.asp">Security/Privacy -->
+<!-- 						Notice</a> <br> <a href="http://gis.catawbacountync.gov">Catawba -->
+<!-- 						County GIS</a> - <a href="http://www.catawbacountync.gov">Catawba -->
+<!-- 						County Homepage</a> -->
+<!-- 				</center></font> -->
+<!-- 		</div> -->
+		<div></div>
+
+	</div>
+</body>
+</html>
