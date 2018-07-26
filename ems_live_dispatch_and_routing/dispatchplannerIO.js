@@ -71,6 +71,33 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 		
 		}
 	});
+	//set cookies
+	emsMap.on("load",function(){
+		getDataButton.set("disabled",false);		
+		esriID.getCredential("EMS service url").then(function(cred){
+			
+				var cred={
+						"serverInfos": [{ "server":"https://arcgis2.catawbacountync.gov",
+							"currentVersion":10.31,
+							"fullVersion":"10.3.1",
+							"soapUrl":"https://arcgis2.catawbacountync.gov/arcgis/services",
+							"secureSoapUrl":null,
+							"hasServer": true
+						}
+						],
+						"authInfo":{
+							"isTokenBasedSecurity":true,
+							"tokenServicesUrl":"https://arcgis2.catawbacountync.gov/arcgis/tokens/",
+							"longLivedTokenValidity":1
+						},
+						"credentials":[cred]
+				}
+				localStorage.setItem("catcoEMS", JSON.stringify(cred));
+				createCarGLS();
+			});
+		
+	});
+
 	
 	window.addEventListener("orientationchange", function(evt) {
 	   domStyle.set(dijit.byId("borderContainer").domNode,"height","100%");
@@ -79,10 +106,10 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 	});
 
 	var socket;
-	var geolocator = new Geolocator("https://arcgis2.catawbacountync.gov/arcgis/rest/services/catawba/Composite_Locator/GeocodeServer")
+	var geolocator = new Geolocator("geocode server")
 	//create digit variables and other globals
 	Proj4.defs('NCSP','+proj=lcc +lat_1=34.33333333333334 +lat_2=36.16666666666666 +lat_0=33.75 +lon_0=-79 +x_0= 609601.22 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs');
-	var addQueryTask = new QueryTask("https://arcgis2.catawbacountync.gov/arcgis/rest/services/catawba/address_pts/MapServer/0");
+	var addQueryTask = new QueryTask("addresses endpoint");
 	var getDataButton = new Button({id:"getDataButton",label:"Get GPS Points",style:"margin-left:2vh;"},"getDataButton");
 	var startRouteButton = new Button({id:"startRouteButton",label:"Set Start Point",disabled:false,style:"margin-left:4vh;"},"startRouteButton");
 	var stopRouteButton = new Button({id:"stopRouteButton",label:"Set End Point",disabled:false,style:"margin-left:4vh;"},"stopRouteButton");
@@ -97,47 +124,83 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 	var startHourTB = new TextBox({id:"startHourTB",placeHolder:"hh",style:"width:50px;"},"startHourTB");
 	var endMinTB = new TextBox({id:"endMinTB",placeHolder:"mm",style:"width:50px;"},"endMinTB");
 	var endHourTB = new TextBox({id:"endHourTB",placeHolder:"hh",style:"width:50px;"},"endHourTB");
-	var basemap = new ArcGISDynamicMapServiceLayer("https://arcgis2.catawbacountync.gov/arcgis/rest/services/public_access/Basemap_pa/MapServer",{id:"basemap"});
+	var basemap = new ArcGISDynamicMapServiceLayer("basemap endpoint",{id:"basemap"});
 	basemap.setVisibleLayers([0,1,3,4,7,8]);
 	var basemapDefQueries = []
 	basemapDefQueries[1] ="COMMENT NOT LIKE 'ESN ONLY'";
 	basemap.setLayerDefinitions(basemapDefQueries)
-	var addressPts = new ArcGISDynamicMapServiceLayer("https://arcgis2.catawbacountync.gov/arcgis/rest/services/catawba/address_pts/MapServer",{id:"address_pts"});
+	var addressPts = new ArcGISDynamicMapServiceLayer("addresses mapservice",{id:"address_pts"});
 	var addPtDef= [];
 	addPtDef[0] = "ADDR_STATUS LIKE 'ACT'";
 	addressPts.setLayerDefinitions(addPtDef);
-	var utilService = new ArcGISDynamicMapServiceLayer("https://arcgis2.catawbacountync.gov/arcgis/rest/services/public_access/Utilities/MapServer",
+	var utilService = new ArcGISDynamicMapServiceLayer("utility mapservice",
 			{id:"utilService"});
 	utilService.setVisibleLayers([6]);
-	var emsMap = new ArcGISDynamicMapServiceLayer("https://arcgis2.catawbacountync.gov/arcgis/rest/services/public_access/Emergency/MapServer",{id:"emsMap"});
+	var emsMap = new ArcGISDynamicMapServiceLayer("EMS layer map service",{id:"emsMap"});
 	emsMap.setVisibleLayers([3,4,6]);
 	emsMap.show();
 	var emsLDO = new LayerDrawingOptions();	
-	var orthoService = new ArcGISDynamicMapServiceLayer("https://arcgis2.catawbacountync.gov/arcgis/rest/services/orthos/orthos/MapServer",{
+	var orthoService = new ArcGISDynamicMapServiceLayer("ortho map service",{
 		id:"orthoService"});
 	orthoService.setVisibleLayers([5]);
 	orthoService.setVisibility(false);
-	var pictoService = new ArcGISDynamicMapServiceLayer("https://arcgis2.catawbacountync.gov/arcgis/rest/services/orthos/pictometry17/MapServer",{
+	var pictoService = new ArcGISDynamicMapServiceLayer("pictometry map service",{
 		id:"pictoService"});
 	pictoService.setVisibility(false);
+	// graphics layer for gps points
 	var avlPTGL = new GraphicsLayer()
+	//graphics layer for highlighting a gps point
 	var avlHighlightGL = new GraphicsLayer();
+	//route graphics layer
 	var routeGL = new GraphicsLayer();
+	//closest facility GL for routing to nearest car
 	var cfGL = new GraphicsLayer();
-	var streetIntsFL = new FeatureLayer("https://arcgis2.catawbacountync.gov/arcgis/rest/services/catawba/Centerlines_Network/MapServer/10",
+	///for query street intersections data
+	var streetIntsFL = new FeatureLayer("street intersections endpoint",
 			{id:"streetIntsFL",
 			mode: FeatureLayer.MODE_ONDEMAND,
-		    outFields: ["*"]});
-	var streetsCLFL = new FeatureLayer("https://arcgis2.catawbacountync.gov/arcgis/rest/services/catawba/Centerlines_Network/MapServer/8",
+			outFields: ["*"]});
+	//for query centerline info
+	var streetsCLFL = new FeatureLayer("centerline endpoint for display and query",
 			{id:"streetCLFL",
 			mode: FeatureLayer.MODE_ONDEMAND,
 		    outFields: ["*"]});
-
-	var addQueryTask = new QueryTask("https://arcgis2.catawbacountync.gov/arcgis/rest/services/catawba/address_pts/MapServer/0");
-
+	//for querying addresses
+	var addQueryTask = new QueryTask("address endpoint");
+	//incident location GL and symbol	
 	var incidentLocGL = new GraphicsLayer();
 	var incidentLocSymbol = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_SQUARE,15,null,new Color("#ff0000"));
+	//closest facility task
+	var cft = new CFT("closest facility task");
+
+	//predefined symbols for routing 
+	var routeSLS = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, new Color("00ff00"),2.5);
+	var blueColor = new Color("#0000ff");
+	var redColor = new Color(Color.fromHex("#ff0000"));
+	var greenColor= new Color(Color.fromHex("#00ff00"));
 	
+	//add gps point highlight graphic to GL
+	avlHighlightGL.add(new Graphic(null,
+			new SimpleMarkerSymbol(
+			          SimpleMarkerSymbol.STYLE_CIRCLE, 
+			          14, 
+			          new SimpleLineSymbol(
+			            SimpleLineSymbol.STYLE_NULL, 
+			            new Color([255, 255, 102, 1]), 
+			            1
+			          ),
+			          new Color([255, 255, 102, 1])
+			        )));
+	//create the map
+	var map = new Map("mapDiv", {
+		id:"map",
+		zoom: 10,
+		spatialReference: new SpatialReference(102719),
+		showLabels:true
+	});
+
+
+	// build service area layers on the fly. I do not want to store on disk.
 	var serviceAreaFTFL = new FeatureLayer({id:"serviceAreaFTFL",layerDefinition:{
 		"geometryType":"esriGeometryPolygon",
 		"objectIdField":"ObjectID",
@@ -221,20 +284,20 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 		]
 	}});
 
-	var serviceareasCreated = false;
+	
 	
 	var srProj = new SpatialReference(102719);
 	
 	//Create Service area Feature Layers. Not storing on HD any more, so this gets created client side now. need to grab the bases to feed into task
-	
-	baseQT = new QueryTask("https://arcgis2.catawbacountync.gov/arcgis/rest/services/public_access/Emergency/MapServer/4");
+	var serviceareasCreated = false;
+	baseQT = new QueryTask("ems bases");
 	var twoMinSymbol= new SimpleFillSymbol(SimpleFillSymbol.STYLE_SOLID,new SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new Color([0,102,0]),2),new Color([0,102,0,0.25]));
 	var fourMinSymbol=new SimpleFillSymbol(SimpleFillSymbol.STYLE_SOLID,new SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new Color([0,255,0]),2),new Color([0,255,0,0.25]));
 	var sixMinSymbol=new SimpleFillSymbol(SimpleFillSymbol.STYLE_SOLID,new SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new Color([255, 255, 0]),2),new Color([255, 255, 0,0.25]));
 	var eightMinSymbol=new SimpleFillSymbol(SimpleFillSymbol.STYLE_SOLID,new SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new Color([255,0,0]),2),new Color([255, 0, 0,0.25]));
 	var uvrSA = new UVR (null,"ToBreak");
 	uvrSA.legendOptions={"title":"Service Area"}
-	var sat = new SAT("https://arcgis2.catawbacountync.gov/arcgis/rest/services/catawba/Centerlines_Network/NAServer/Service%20Area");
+	var sat = new SAT("service area task");
 
 	uvrSA.addValue(2,twoMinSymbol);
 	uvrSA.addValue(4,fourMinSymbol);
@@ -317,65 +380,7 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 
 	
 	
-	var cft = new CFT("https://arcgis2.catawbacountync.gov/arcgis/rest/services/catawba/Centerlines_Network/NAServer/Closest%20Facility");
-	//enable get gps points button when the ems map loads successfully
-	emsMap.on("load",function(){
-		getDataButton.set("disabled",false);		
-		esriID.getCredential("https://arcgis2.catawbacountync.gov/arcgis/rest/services/public_access/Emergency/MapServer").then(function(cred){
-			
-				var cred={
-						"serverInfos": [{ "server":"https://arcgis2.catawbacountync.gov",
-							"currentVersion":10.31,
-							"fullVersion":"10.3.1",
-							"soapUrl":"https://arcgis2.catawbacountync.gov/arcgis/services",
-							"secureSoapUrl":null,
-							"hasServer": true
-						}
-						],
-						"authInfo":{
-							"isTokenBasedSecurity":true,
-							"tokenServicesUrl":"https://arcgis2.catawbacountync.gov/arcgis/tokens/",
-							"longLivedTokenValidity":1
-						},
-						"credentials":[cred]
-				}
-				localStorage.setItem("catcoEMS", JSON.stringify(cred));
-				createCarGLS();
-			});
-		
-	});
-
-	
-
-	var params = new ProjectParameters();
-	params.outSR = srProj;
-	params.transformForward = true;
-	params.transformation = {wkid:108151};
-
-	var routeSLS = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, new Color("00ff00"),2.5);
-	var blueColor = new Color("#0000ff");
-	var redColor = new Color(Color.fromHex("#ff0000"));
-	var greenColor= new Color(Color.fromHex("#00ff00"));
-	
-	
-	avlHighlightGL.add(new Graphic(null,
-			new SimpleMarkerSymbol(
-			          SimpleMarkerSymbol.STYLE_CIRCLE, 
-			          14, 
-			          new SimpleLineSymbol(
-			            SimpleLineSymbol.STYLE_NULL, 
-			            new Color([255, 255, 102, 1]), 
-			            1
-			          ),
-			          new Color([255, 255, 102, 1])
-			        )));
-	
-	var map = new Map("mapDiv", {
-		id:"map",
-		zoom: 10,
-		spatialReference: new SpatialReference(102719),
-		showLabels:true
-	});
+	//handle map events and settings 
 	map.disableKeyboardNavigation();
 
 	map.on("load",function(){
@@ -427,22 +432,11 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 	map.addLayer(cfGL);
 	map.addLayer(incidentLocGL);
 	
-//	var pdfLayoutFrameGL = new GraphicsLayer({id:"pdfLayoutFrameGL"});
-//	pdfLayoutFrameGL.hide();
-//	pdfLayoutFrameGL.add(new Graphic(null,new SimpleFillSymbol(SimpleFillSymbol.STYLE_SOLID,
-//			new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID,
-//					new Color([0, 0, 255]), 3), new Color([255, 255, 255,0]))));
-//	console.log(pdfLayoutFrameGL);
-//	map.addLayer(pdfLayoutFrameGL);
+	//create standby widget for use when getting data
 	var standby = new Standby({target:"mapDiv"});
 	document.body.appendChild(standby.domNode);
 	standby.startup();
-
-	var extentLeft = '';
-	var extentRight = '';
-	var extentTop = '';
-	var extentTop = '';
-	
+	//set navigation toolbar, from esri sample.
 	var navToolbar = new Navigation(map);
 	navToolbar.on("onExtentHistoryChange", extentHistoryChangeHandler);
 	registry.byId("zoomin").on("click", function () {
@@ -458,15 +452,17 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 		navToolbar.zoomToNextExtent();});
 	registry.byId("pan").on("click", function () {
 		navToolbar.activate(Navigation.PAN);});
-	
+	function extentHistoryChangeHandler () {
+			registry.byId("zoomprev").disabled = navToolbar.isFirstExtent();
+			registry.byId("zoomnext").disabled = navToolbar.isLastExtent();
+		}
+	//zoom full extent function
 	function zoomFullExtent(){
 		map.setExtent(new Extent(1238354,655956,1433787,770657,new SpatialReference({wkid:102719})));
 		map.centerAt(new Point(1335630,712000,srProj));
 	}
-	function extentHistoryChangeHandler () {
-		registry.byId("zoomprev").disabled = navToolbar.isFirstExtent();
-		registry.byId("zoomnext").disabled = navToolbar.isLastExtent();
-	}
+
+	//Search and zooming to an address code.
 	var addressSymbol = new esri.symbol.SimpleMarkerSymbol(esri.symbol.SimpleMarkerSymbol.STYLE_SQUARE, 
 			10, new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255,0,0]), 1), new dojo.Color([0,255,0]));
 	var addressMemory = new Memory();
@@ -524,6 +520,10 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 		}
 	}, "addressSearch").startup;
 	
+
+
+	//code to handle the dgrid for displaying GPS query info
+
 	var dataGridHeader = new Grid({		
 		columns:{
 		Longitude: 'Northing (ft)',		
@@ -553,6 +553,8 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 	                                                {label:"3M7",value:"3M7"},{label:"3M8",value:"3M8"},{label:"3M9",value:"3M9"},{label:"3M10",value:"3M10"},{label:"3M11",value:"3M11"},{label:"3M12",value:"3M12"},
 	                                                {label:"3M42",value:"3M42"},{label:"3M45",value:"3M45"},{label:"3M46",value:"3M46"},{label:"C300",value:"300"},{label:"C301",value:"301"},
 	                                                {label:"C307",value:"307"},{label:"C308",value:"308"}]},"unitSelect");
+	
+	///getting and processing/displaying historic GPS data.
 	getDataButton.on("click",function(){
 		dom.byId("modelAVLDT").innerHTML= "<b>Emg. Rush Hour DT Est. (min.): </b>";
 		dom.byId("routeDistance").innerHTML = "<b>Distance (mi.): </b>";
@@ -604,7 +606,7 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 					standby.hide();
 				}
 				var dGridData = [];				
-				
+				//create symbol color for graphic for individual points and add data to the dgrid table
 				for(var i=0;i<result.length;i++){
 					var x = parseFloat(result[i][1]);
 					var y = parseFloat(result[i][0]);
@@ -631,6 +633,7 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 				domStyle.set("dataGrid-row-0","background-color","#00ff00")
 				domStyle.set("dataGrid-row-"+(result.length-1).toString(),"background-color","#ff0000")
 				
+				//zoom to extent of graphics
 				var graphicExtent =graphicsUtils.graphicsExtent(avlPTGL.graphics)
 				var xMin = graphicExtent.xmin-150;
 				var xMax = graphicExtent.xmax+150;
@@ -638,10 +641,12 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 				var yMax = graphicExtent.ymax+150;
 				graphicExtent.update(xMin,yMin,xMax,yMax,srProj)
 				map.setExtent(graphicExtent);	
-
+				
+				//calculate the total time between first and last ponts
 				var avlTimeDiff =Date.parse(avlPTGL.graphics[avlPTGL.graphics.length-1].attributes.date+" "+avlPTGL.graphics[avlPTGL.graphics.length-1].attributes.time)-Date.parse(avlPTGL.graphics[0].attributes.date+" "+avlPTGL.graphics[0].attributes.time);
 
 				dom.byId("driveTime").innerHTML= "<b>AVL Drive Time (min.): </b>"+((avlTimeDiff/60000).toFixed(2)).toString();
+				//calculate what the route should have taken according to the drive time model
 				getRouteQuery(avlPTGL.graphics).then(function(routeGraphic){
 					console.log(routeGraphic)
 					var dt = routeGraphic.attributes.Total_EMS_DriveTime.toFixed(2);
@@ -661,7 +666,7 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 			map.setScale(135.36);
 		}
 		});
-
+	//highlight the gps point on the map when click in the table
 	on(dom.byId("dataGrid"),"click",function(evt){
 		for(var i =0, len=avlPTGL.graphics.length;i<len;i++){
 			if(evt.target.parentNode.parentNode.parentNode.id=="dataGrid-row-"+i.toString()){
@@ -698,40 +703,12 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 		}			
 		avlHighlightGL.graphics[0].setGeometry(pt.graphic.geometry);
 	});
-	
+	//tab rendering gets messed up when moving between tabs, so this cleans it up and makes sure everything is in view
 	dijit.byId("dijit_layout_TabContainer_1_tablist_queryContentPane").on("click",function(){dom.byId('unitTitle').scrollIntoView();});
 	dijit.byId("dijit_layout_TabContainer_1_tablist_routeContentPane").on("click",function(){dom.byId('title').scrollIntoView();})
-	function getExtent(points){
-		var extentLeft = points[0].x;
-		var extentRight = points[0].x;
-		var extentTop = points[0].y;
-		var extentBottom = points[0].y;
-
-		for(var i=1;i<points.length;i++){
-			if(points[i].x < extentLeft){
-				extentLeft = points[i].x;
-			}
-			else if(points[i].x > extentRight){
-				extentRight = points[i].x;
-			}
-			else{}
-		}
-		for(var i=1;i<points.length;i++){
-			if(points[i].y < extentBottom){
-				extentBottom = points[i].y;
-			}
-			else if(points[i].y > extentTop){
-				extentTop = points[i].y;
-			}
-			else{}
-		}
-		extentLeft = extentLeft-300;
-		extentRight = extentRight+300;
-		extentTop = extentTop+300;
-		extentBottom = extentBottom-300;
-		map.setExtent(new Extent(extentLeft,extentBottom,extentRight,extentTop,srProj));
-	}
-
+	
+	
+	//This block of code is used for determing the optimal route and drive time between any two points selected by the user on the map
 	startRouteButton.on("click",function(){
 		var centerX = Math.trunc((map.extent.xmax+map.extent.xmin)/2);
 		var centerY = Math.trunc((map.extent.ymax+map.extent.ymin)/2);
@@ -794,7 +771,7 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 	function getRouteQuery(routeGraphics){
 			var deferred = new Deferred();
 			var routeGraphic = new Graphic();
-			var rTask = new RouteTask("https://arcgis2.catawbacountync.gov/arcgis/rest/services/catawba/Centerlines_Network/NAServer/Route");
+			var rTask = new RouteTask("centerlines routing endpoint");
 			var rParams = new RouteParameters();
 			rParams.returnRoutes = true;
 			rParams.returnDirections = false;
@@ -819,7 +796,7 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 	}
 
 	
-	
+	//this code allows user to select a street intersection and the application will automatically route the nearest available vehicle
 	var streetMemory = new Memory();
 	var stIntRouteSearch = new ComboBox({
 		id:"stIntRouteSearch",
@@ -984,7 +961,7 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 	})
 	
 	
-	
+	//This code allows the user to select any address in the county and route the nearest available vehicle
 	var addRouteMemory = new Memory();
 	var addressRouteSearch = new ComboBox({
 		id: "addressRouteSearch",
@@ -1001,7 +978,7 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 			dijit.byId("stIntRouteSearch").set("disabled",true);
 			var self = dijit.byId("addressRouteSearch")
 			var value = self.value;
-			var addQueryTask = new QueryTask("https://arcgis2.catawbacountync.gov/arcgis/rest/services/catawba/address_pts/MapServer/0");
+			var addQueryTask = new QueryTask("address point endpoint");
 			var addQuery = new Query();
 			addQuery.returnGeometry = true;
 			addQuery.where = "ADDRESS_FULL LIKE '%" + value + "%'" ;
@@ -1027,6 +1004,7 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 		}
 	}, "addressRouteSearch").startup;
 	
+	//function to route nearest available car
 	function getNearestCar(){
 		dijit.byId("addressRouteSearch").set("disabled",true);
 		dijit.byId("stIntRouteSearch").set("disabled",true);
@@ -1043,13 +1021,13 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 		cftParams.returnDirections = true;
 		cftParams.travelDirection = NATypes.TravelDirection.FROM_FACILITY;
 		cftParams.impedanceAttribute="EMS_DriveTime";
-		//carFS.features.push(new Graphic(new Point(map.getLayer("3M11").graphics[0].geometry),null,null));
+		//Select only available cars for routing
 		for(var i in medics){
 			if(map.getLayer(medics[i]).graphics[0].attributes.available=="yes" && map.getLayer(medics[i]).graphics[1].symbol.text.indexOf("Out")==-1){
 				carFS.features.push(new Graphic(new Point(map.getLayer(medics[i]).graphics[0].geometry),null,{"Name":medics[i]}));
 			}			
 		}					
-		//map.setExtent(result.features[0].geometry.getExtent());
+
 		cftParams.facilities=carFS;
 		cft.solve(cftParams,function(result){
 			var route = result.routes[0];
@@ -1066,6 +1044,8 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 			var seconds = ((parseInt(dtString[1])*0.6).toFixed(0)).toString();
 			var unit = attributes.Name.split(" - ")[0];
 			dom.byId("nearestUnit").innerHTML = "Nearest Vehicle: " + unit +", "+minutes+" min. "+seconds+"sec.";
+
+			//set picked car and text symbols red
 			map.getLayer(unit).graphics[0].setSymbol(medicSymbolRed);
 			var textLabelRed = new TextSymbol().setColor(redColor).setHaloColor(new Color('#ffffff')).setHaloSize(2.5);
 			 if(['3M11','3M42','3M45','3M46'].indexOf(unit)!=-1){
@@ -1087,6 +1067,7 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 			var yMin = graphicExtent.ymin-1500;
 			var yMax = graphicExtent.ymax+1500;
 			graphicExtent.update(xMin,yMin,xMax,yMax,srProj)
+			//zoom to route
 			map.setExtent(graphicExtent);				
 				
 		},function(err){console.log(err);});
@@ -1112,6 +1093,8 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 			"28637": "HILDEBRAN",
 			"28673": "SHERRILLS FORD"
 	}
+
+	//This code handles the layer tree for toggling layers on the map
 	var serviceLayerIDs = {
 
 			"Structures":0,
@@ -1355,6 +1338,10 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 
 	registry.byId("layerTreeContentPane").addChild(myTree);
 
+
+
+
+	//buttons to clear out various functions in application
 	var clearAVLButton = new Button ({id:"clearAVLButton",label:"Clear Map",style:"margin-left:4vh;"},"clearAVLButton");
 	var clearRouteButton = new Button ({id:"clearRouteButton",label:"Clear",style:"margin-left:4vh;"},"clearRouteButton");
 	var resetNearestUnitButton = new Button({id:"resetNearestUnitButton", label:"Reset Search",style:"margin-left:4vh;margin-top:2vh;"},"resetNearestUnitButton");
@@ -1407,6 +1394,9 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 		dom.byId("stopPtText").innerHTML ="";
 
 	});
+
+
+//This part of the code is where the live dispatch is handled
   var medics = ['3M1','3M2','3M3','3M4','3M5','3M6','3M7','3M8','3M9','3M10','3M11','3M12','3M42','3M45','3M46'];
   var medicSymbolBlue = new PMS ('https://arcgis2.catawbacountync.gov/images/medic_blue.png',25,25);
   var medicSymbolRed = new PMS ('https://arcgis2.catawbacountync.gov/images/medic_red.png',25,25);
@@ -1414,7 +1404,7 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
   var emsLoc = new PMS('https://arcgis2.catawbacountync.gov/images/ems_location.png',20,30);
   
   
-
+ //the user can left click on the list of units that are being streamed and zoom to one
   var dispatchZoomMenu = new Menu({
 	  targetNodeIds: [dijit.byId("carDispatchSelect").domNode]
   },"dispatchZoom");
@@ -1433,6 +1423,8 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
  
 
   //INSTANTIATE ALL THE UNIT GRAPHIC LAYERS
+  //I can't use a feature layer because when I am updating the status I cannot query using a where statement, because
+  //the FL is instantiated from a feature collection, client side
   function createCarGLS(){
 	  console.log("creating cars")
 	  for (var i in medics){
@@ -1731,7 +1723,7 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 	  createSocket();
   }
   function createSocket(){
-	  socket = socketio("https://arcgis2.catawbacountync.gov:3001", {transports: ['websocket',"polling"]})
+	  socket = socketio("websocket url", {transports: ['websocket',"polling"]})
 	  socket.on("connect",function(evt){
 		  console.log("socket opened");
 		  wsTimer.stop();
@@ -1781,12 +1773,12 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 	},"templateSelect");
 	
 	var pdfTitleTB = new TextBox({id:"pdfTitleTB"},"pdfTitleTB");
-
+	var pTask = new PrintTask("print task endpoint",{async:true});
 	dijit.byId("print").on("click",function(){
-		var pTask = new PrintTask("https://arcgis2.catawbacountync.gov/arcgis/rest/services/public_access/paPrint/GPServer/Export%20Web%20Map",{async:false});
+		
 		dijit.byId("print").set("label","Printing...");
 		dijit.byId("print").disabled=true;
-		//var pTask = new PrintTask("https://arcgis2.catawbacountync.gov/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task",{async:false});
+
 		//for some reason setting the parameters below for both print parameters and print template does not work if setting 
 		//in the constructor. It works if I parse it out after initializing the variables.
 		var template = new PrintTemplate();
@@ -1830,8 +1822,6 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 	
 	var screenshotButton = new Button({id:"screenshotButton",label:"Screenshot (JPG, Map Only)",style:"margin-top:1vh;"},"screenshotButton");
 	screenshotButton.on("click",function(){
-		
-		var pTask = new PrintTask("https://arcgis2.catawbacountync.gov/arcgis/rest/services/public_access/paPrint/GPServer/Export%20Web%20Map",{async:false});
 		var template = new PrintTemplate();
 		template.preserveScale = true;
 		;
@@ -1858,10 +1848,6 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 			alert("Printing Error!")
 		});
 	});
-  
-  
-  
-  
   
   
   
