@@ -1,5 +1,5 @@
 # IOT_Apps
-IoT Apps for Catawba County, NC - written by Arjun Dongre
+IoT Apps for Catawba County, NC - written by Arjun Dongre, 7-26-2018
 
 Web applications developed using ESRI ArcGIS for Javascript API, dojo Toolkit, ArcServer hosted Routing Service, and NodeJS, and and SOI developed in ArcObjects for Java SDK
 
