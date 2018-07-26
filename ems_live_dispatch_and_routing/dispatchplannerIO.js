@@ -1456,7 +1456,7 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 	  setTimeout(function(){dijit.byId("dispatchCB").set("checked",true);},1500);	  
   }
 
-  
+  //function to set car symbol 
   function setCarSymbol(carName){
 	  if(map.getLayer(carName).graphics[0].attributes["available"]=="yes")
 	  {
@@ -1471,7 +1471,7 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 		  map.reorderLayer(map.getLayer(carName),map.graphicsLayerIds.length-1)
 	  }
   }
-  
+  //function to reset all car location and status
   function resetAllCars(){
 	  resetNearestSearches();
 	  for (var i in medics){
@@ -1483,7 +1483,7 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 		  map.getLayer(medics[i]).graphics[1].symbol.setColor(blueColor);		  
 	  }	  
   }   
-  
+  //will reset just a subset of cars if car selectino set is altered
   function resetSubsetCars(selectedCarList){
 	  for(var i in medics){
 		  if(selectedCarList.indexOf(medics[i])==-1){
@@ -1498,6 +1498,7 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
   
   dijit.byId("carDispatchSelect").on("change",function(selectedList){  resetSubsetCars(selectedList);});
   
+  //sends the list of cars to the websocket to get data for
   function getSelectedCarsStatement(){
 	  var selectedCars = dijit.byId("carDispatchSelect").getSelected();
 	  var carSelectStatement = "(''";
@@ -1509,26 +1510,16 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 	  return carSelectStatement	  
   }
   
+  //timer to send message to websocket to get new info
   var dispatchTimer = new dojox.timing.Timer(3000);
  
   dispatchTimer.onTick = function(){
 	socket.send(getSelectedCarsStatement());
  }
 
-  dijit.byId("dispatchCB").on("change",function(evt){
-	  navToolbar.activate(Navigation.PAN);
-	  if(dijit.byId("dispatchCB").checked){
-		  createSocket();
-		  dispatchTimer.start();
-	  }
-	  else{
-		  resetAllCars();
-		  dispatchTimer.stop()
-		  socket.close()
-	  }	  
-  });
+
   
-  
+  //function to update car location
   function updateCarLocation(data){	 
 	  //console.log(data)
 	  var dataLen = data.length;
@@ -1542,7 +1533,7 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 		  }			    
 	  }	
   }
-  
+  //function to update car status
   function updateCarStatus(cars){
 	  var def = new Deferred();
 	  for (var car in cars){	
@@ -1566,7 +1557,7 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 	  },800)
 	  return def.promise;
   }
-
+//turn on and office geolocated incidents
   function toggleCADIncidents(boolean){
 	  for(var i = 0;i<incidentListMaster.length;i++){
 		  try{
@@ -1591,7 +1582,7 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 	  toggleCADIncidents(evt);	  
   });
   
- 
+ //function add incidents to map
   function addCADIncident(ocaNum,incidentObject){
 	  //console.log(incidentObject)
 	  //console.log("added incident "+ocaNum)
@@ -1645,9 +1636,11 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 	  addQuery.where = "ADDRESS_FULL LIKE '" + address+ "' and "+"COMMUNITY LIKE '"+ city+"'" ;
 	  addQuery.outFields = ["ADDRESS_FULL", "PIN", "ZIP"];
   }
+  //array that stores all the incidents, which changes based on websocket updates
   var incidentListMaster = [];
   var clientStartup=true;
   
+  //populates the call information when a incident is selected from drop down
   function populateCallInfo(incidentNumber){
 	  map.centerAt(map.getLayer(incidentNumber).graphics[0].geometry).then(function(){map.setScale(12000)});
 	  domConstruct.empty("unitCallInfo");
@@ -1670,8 +1663,9 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
   dijit.byId("callInfoSelect").on("change",function(select){
 	 populateCallInfo(select);
   });
-  function updateIncidentInfo(incidents){
-	  
+
+  //updates the running master list of incidents
+  function updateIncidentInfo(incidents){	  
 	  if(clientStartup){
 		  for(incident in incidents){
 			  if (incidents.hasOwnProperty(incident)){
@@ -1717,7 +1711,20 @@ require(["esri/renderers/UniqueValueRenderer","esri/tasks/NATypes","esri/tasks/S
 		  }
 	  }
   }
-  
+   //can turn on and off live stream via check box
+   dijit.byId("dispatchCB").on("change",function(evt){
+	navToolbar.activate(Navigation.PAN);
+	if(dijit.byId("dispatchCB").checked){
+		createSocket();
+		dispatchTimer.start();
+	}
+	else{
+		resetAllCars();
+		dispatchTimer.stop()
+		socket.close()
+	}	  
+});
+  //handles opening the websocket connection, socket will automatically start only after a cookie has been created and the car GLS have been created
   var wsTimer = new dojox.timing.Timer(3000);
   wsTimer.onTick = function(){
 	  createSocket();

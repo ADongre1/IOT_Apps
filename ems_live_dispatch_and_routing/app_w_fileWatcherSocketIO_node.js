@@ -1,4 +1,4 @@
-
+//import libraries
 var express = require('express');
 var WebSocket = require('ws');
 var app = express();
@@ -12,9 +12,12 @@ var deleteDataTimer = new SimpleTimer({pollInterval: 300000});
 var moment = require('moment-timezone');
 var xml2js = require('xml2js');
 var chokidar = require('chokidar');
-var watcher = chokidar.watch('C:/avlWS/userTokens.txt', {
+
+//watch for ArcServer updating the user token JSON text file through SOI and update JSON in memory
+var watcher = chokidar.watch('userTokens.txt', {
   persistent: true
 });
+var userJSON={};
 watcher.on("change",function(path){
   fs.readFile(path, {encoding: 'utf-8'}, function(err,data){
     var soiJSON = JSON.parse(data);
@@ -25,8 +28,8 @@ watcher.on("change",function(path){
     }
   });
 });
-var userJSON={};
 
+//create websocket server
 httpsOptions = {
   pfx:fs.readFileSync("c:\\avlWS\\wildcard2020.pfx"),
   passphrase:'password'
@@ -37,10 +40,13 @@ app.use(cors());
 var wss = require('socket.io')(server,{origins:['*:*']});
 var connectionCount = 0;
 server.listen(3001);
+
+//db connection to get data that is copied to GIS sql server table
+//this is the data that clients read so clients aren't hitting AVL directly.
 var avlConfig = {
-    user:,
-    password:,
-    server: '10.111.0.48',
+    user:"",
+    password:"",
+    server: '',
     port:1433,
     database: 'AVL',
     pool: {
@@ -49,26 +55,28 @@ var avlConfig = {
        idleTimeoutMillis: 600
    }
 }
-
 var avlConn = new mssql.Connection(avlConfig)
-
 avlConn.connect();
 
+//Delete data after 5 minutes as it's streaming, don't need old data
 deleteDataTimer.on("poll",function(){
   deleteData();
 })
+
 function deleteData(){
   var deleteAllQuery = "Delete from AVL.dbo.AVL";
   new mssql.Request(avlConn).query(deleteAllQuery,function(err,result){
       //console.log("avl data deleted")
   });
 }
+
+//connection to the live message switch database, only one connectioni
 var msgSwitchReadConfig = {
-    user:,
-    password:
-    server: '10.3.13.201',
+    user:"",
+    password:"",
+    server:"",
     port:1433,
-    database: 'vairmobile',
+    database: '',
     pool: {
        max: 1,
        min: 0,
@@ -78,6 +86,8 @@ var msgSwitchReadConfig = {
 var msgSwitchReadConn = new mssql.Connection(msgSwitchReadConfig)
 msgSwitchReadConn.connect();
 
+
+//every two seconds get the latest entry from message switch and write in GIS SQL Server table
 timer.on("poll",function(){
   var dateTime=moment().tz("America/New_York").format();
   var timeDate = new Date();
@@ -101,6 +111,7 @@ timer.on("poll",function(){
       }
     });
 });
+//on websocket connection check user credentials update connection count and send intial car/incident info and when message is sent from client
 wss.on('connection', function(ws) {
   //console.log("connected")
   fs.readFile("C:\\avlWS\\userTokens.txt", {encoding: 'utf-8'}, function(err,data){
@@ -221,7 +232,7 @@ function resetEMSObjects(){
     "3M46":{available:"yes",ocanum:"","unitInfo":""}//,
   }
 }
-
+//processe XML CAD files to extract incident location info and what vehicle was dispatched.
 function processFiles() {
   resetEMSObjects();
   //console.log("close calls")
@@ -232,7 +243,6 @@ function processFiles() {
   fs.readdir(dir, function(err, files) {
     self.fileList = files;
     for (var i = 0; i < self.fileList.length; i++) {
-      //console.log(self.fileList[i])
       var file = fs.readFileSync('CADData\\' + self.fileList[i], {encoding: 'utf-8'});
       file =file.replace(" & "," &amp; ")
       new xml2js.Parser().parseString(file, function(err, result) {
@@ -251,13 +261,14 @@ function processFiles() {
     }
     //read the files again, sort in order by modified date and recreate CAD objects
     //must be nested, otherwise it will run before completed routine finishes.
+    //wanted to be sorted because we want the latest info from the files to be associated with the vehicles
     fs.readdir(dir, function(err, files) {
       self.fileList = files.sort(function(a, b) {
         return fs.statSync(dir + "/" + a).mtime.getTime() - fs.statSync(dir + "/" + b).mtime.getTime();
       });
-  //  console.log("dispatching")
+  
      for (var i = 0; i < self.fileList.length; i++) {
-     //  console.log(self.fileList[i])
+
        var file = fs.readFileSync('CADData\\' + self.fileList[i], {encoding: 'utf-8'});
        file =file.replace(" & "," &amp; ")
        new xml2js.Parser().parseString(file, function(err, result) {
@@ -270,7 +281,6 @@ function processFiles() {
          var address = call.actualincidlocation;
 
          if(["OUT OF DISTR","STANDBY"].indexOf(complaint) >-1){
-          // console.log(ocanum+" is OFD or Standby...deleting")
            fs.unlinkSync('CADData/' + ocanum+".xml");
          }
          else if(call.timecomplete.length==0){
@@ -279,8 +289,7 @@ function processFiles() {
              var unitInfo = units[unit][0].$;
              var unitName = unitInfo.unit.toUpperCase();
              if (units.hasOwnProperty(unit) && medics.indexOf(unitName) > -1 && !unitInfo.rem) {
-               openIncidents[ocanum].cars.push(unitName);
-               console.log(ocanum+" " + unitName+" dispatched");
+               openIncidents[ocanum].cars.push(unitName);              
                  carStatus[unitName]["available"] = "no";
                  carStatus[unitName]["ocanum"] = ocanum;
                  carStatus[unitName]["unitInfo"]=unitInfo;
@@ -297,8 +306,7 @@ function processFiles() {
          }
        });
      }
-     //console.log(carStatus);
-     //console.log(openIncidents);
+
 
     });
   });
