@@ -23,4 +23,4 @@ I developed a more robust way of geolocating positions in the county using addit
 
 The application will speak directions, generated from ArcServer, as a driver comes up to geofences created from the route geometry information. Three fences are created to speak directions about 700 feet from a turn(fence type A), 150 feet from a turn(fence type B), and then the next set of directions as the driver pulls out of the turn(fence type C). The user can tap on the text below the map to repeat the directions, tap twice on the map to zoom to the route extent, once to zoom to the car location, and on the header to zoom to the destination.
 
-
+Again, a demonstration would be better than trying to glean the application from the code.
