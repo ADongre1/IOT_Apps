@@ -163,7 +163,7 @@ define(["esri/layers/FeatureLayer", "esri/tasks/query",
 				dom.byId("synthPane").innerHTML = "Calculating directions to " + clientObject.name + ".";
 				this.setProj4();
 				var srProj = new SpatialReference(102719);
-				var rTask = new RouteTask('https://arcgis2.catawbacountync.gov/arcgis/rest/services/catawba/Centerlines_Network/NAServer/Route/')
+				var rTask = new RouteTask('enter routing url here')
 				var routeFS = new FeatureSet();
 				routeFS.geometryType = 'esriGeometryPoint';
 				routeFS.spatialReference = srProj;
@@ -238,9 +238,10 @@ define(["esri/layers/FeatureLayer", "esri/tasks/query",
 										"geometry": directions[i]["geometry"],
 										"length": directions[i].attributes["length"]
 									});
-									//console.log(newDirections)
+									
 								}
 							}
+							//set polygon symbols for testing geofences visually.
 							var aSFS = new SimpleFillSymbol(SimpleFillSymbol.STYLE_SOLID,
 								new SimpleLineSymbol(SimpleLineSymbol.STYLE_DASHDOT,
 									new Color([255, 128, 0,0]), 2), new Color([170, 70, 190, 0]));
@@ -362,7 +363,7 @@ define(["esri/layers/FeatureLayer", "esri/tasks/query",
 										features = [aFeature, bFeature];
 										console.log("no c feature")
 									}
-	
+									//add geofences to fences feature layer
 									mobileMap.map.getLayer('fenceFL').applyEdits(features, null, null, function (evt) {});
 
 
@@ -378,15 +379,12 @@ define(["esri/layers/FeatureLayer", "esri/tasks/query",
 									mobileMap.map.getLayer('fenceFL').applyEdits(null, null, [mobileMap.map.getLayer('fenceFL').graphics[i]])
 								}
 							}
-							//var fenceLength = mobileMap.map.getLayer('fenceFL').graphics.length;
-							//Delete last C, we don't need it.
-							//var lastGraphic = mobileMap.map.getLayer('fenceFL').graphics[fenceLength - 1];
-							//mobileMap.map.getLayer('fenceFL').applyEdits(null, null, [lastGraphic])
+							
 							var fenceLength = mobileMap.map.getLayer('fenceFL').graphics.length;
-							console.log(fenceLength)
-							console.log(mobileMap.map.getLayer('fenceFL').graphics)
+							//remove the first fence, we don't need it.
 							mobileMap.map.getLayer('fenceFL').graphics.shift();
-							//fix overlaps.
+							
+							//fix overlaps. Polygons overlap each other, which would return too many intersect results, bad news. This fixes those overlaps.
 							for (var i = fenceLength - 1; i >= 0; i--) {
 								console.log(i)
 								try {
@@ -410,85 +408,7 @@ define(["esri/layers/FeatureLayer", "esri/tasks/query",
 									console.log(e)
 								}
 							}
-							// for (var i = fenceLength - 1; i >= 0; i--) {
-
-							// 	try {
-							// 		var graphic1 = mobileMap.map.getLayer('fenceFL').graphics[i]
-							// 		if (graphic1.attributes.directionType == "C") {
-							// 			var subtractor = new Polygon(srProj);
-							// 			for (var x = 0; x < i; x++) {
-							// 				var tempGraphic = mobileMap.map.getLayer('fenceFL').graphics[x];
-							// 				if (tempGraphic.attributes.directionType == "B" || tempGraphic.attributes.directionType == "A") {
-							// 					for (var z = 0; z < tempGraphic.geometry.rings.length; z++) {
-							// 						subtractor.addRing(tempGraphic.geometry.rings[z])
-							// 					}
-							// 				}
-							// 			}
-							// 			var graphic1Geom = graphic1.geometry;
-							// 			graphic1Geom = gEngine.difference(graphic1Geom, subtractor);
-							// 			graphic1.setGeometry(graphic1Geom)
-							// 			mobileMap.map.getLayer('fenceFL').applyEdits(null, [graphic1]);
-							// 		}
-							// 	} catch (e) {
-							// 		console.log(e)
-							// 	}
-							// }
-							// for (var i = fenceLength - 1; i >= 0; i--) {
-
-							// 	try {
-							// 		var graphic1 = mobileMap.map.getLayer('fenceFL').graphics[i]
-							// 		if (graphic1.attributes.directionType == "B") {
-							// 			var subtractor = new Polygon(srProj);
-							// 			for (var x = 0; x < i; x++) {
-							// 				var tempGraphic = mobileMap.map.getLayer('fenceFL').graphics[x];
-							// 				if (tempGraphic.attributes.directionType == "B" || tempGraphic.attributes.directionType == "C") {
-							// 					for (var z = 0; z < tempGraphic.geometry.rings.length; z++) {
-							// 						subtractor.addRing(tempGraphic.geometry.rings[z])
-							// 					}
-							// 				}
-							// 			}
-							// 			var graphic1Geom = graphic1.geometry;
-							// 			graphic1Geom = gEngine.difference(graphic1Geom, subtractor);
-							// 			graphic1.setGeometry(graphic1Geom)
-							// 			mobileMap.map.getLayer('fenceFL').applyEdits(null, [graphic1]);
-							// 		}
-							// 	} catch (e) {
-							// 		console.log(e)
-							// 	}
-							// }
-							// for (var i = fenceLength - 1; i >= 0; i--) {
-
-							// 	try {
-							// 		var graphic1 = mobileMap.map.getLayer('fenceFL').graphics[i]
-							// 		if (graphic1.attributes.directionType == "A") {
-							// 			var subtractor = new Polygon(srProj);
-							// 			for (var x = 0; x < i; x++) {
-							// 				var tempGraphic = mobileMap.map.getLayer('fenceFL').graphics[x];
-							// 				if (tempGraphic.attributes.directionType == "B" || tempGraphic.attributes.directionType == "C") {
-							// 					for (var z = 0; z < tempGraphic.geometry.rings.length; z++) {
-							// 						subtractor.addRing(tempGraphic.geometry.rings[z])
-							// 					}
-							// 				}
-							// 			}
-							// 			var graphic1Geom = graphic1.geometry;
-							// 			graphic1Geom = gEngine.difference(graphic1Geom, subtractor);
-							// 			graphic1.setGeometry(graphic1Geom)
-							// 			mobileMap.map.getLayer('fenceFL').applyEdits(null, [graphic1]);
-
-							// 		}
-							// 	} catch (e) {
-							// 		console.log(e)
-							// 	}
-							// }
-
-							//reverse the graphics order so graphics stack from start to finish top to bottom
-							//mobileMap.map.getLayer('fenceFL').graphics.reverse();
-							//also move the last one to the top. If we hit this one, then we clear the graphics
-							//mobileMap.map.getLayer('fenceFL').graphics.shift();
-							//mobileMap.map.getLayer('fenceFL').clear();
-							//mobileMap.map.getLayer('fenceFL').applyEdits([fenceReverseGraphics]);
-							//delete fenceReverseGraphics;
-
+							
 							//set the very first directions and emit audio.
 							var distance = parseFloat(newDirections[1]["length"]);
 							if (distance < 0.15) {
@@ -520,8 +440,6 @@ define(["esri/layers/FeatureLayer", "esri/tasks/query",
 								var projLoc = Proj4('NCSP', pos);
 								var location = [projLoc[0] * 3.28084, projLoc[1] * 3.28084];
 								var ptProj = new Point(location, srProj);
-
-								//mobileNav.lastLocation = ptProj;
 								mobileMap.map.getLayer("carsGL").graphics[0].setGeometry(ptProj);
 								var extent = graphicsUtils.graphicsExtent(mobileMap.map.getLayer("carsGL").graphics)
 								var query = new Query();
@@ -535,19 +453,17 @@ define(["esri/layers/FeatureLayer", "esri/tasks/query",
 											var featureIndex=mobileMap.map.getLayer('fenceFL').graphics.indexOf(feature)
 											//calculate the current distance between turn and car on the fly and set correct units
 											var vSDistanceText = '';
-											console.log("test");
+										
 											var text = feature.attributes.directions;
-											console.log(text)
-											//calculate the current distance between car and next feature turn for C type direction, and hand,le below
-											//when setting up text.
+										
+											//calculate the current distance between car and next feature turn for C type fences, and handle text to speak
 											if (feature.attributes.directionType == "C") {
 												console.log("in c")
 												var nextPt = mobileMap.map.getLayer('fenceFL').graphics[featureIndex + 1].attributes.turnPt;
-												console.log(mobileMap.map.getLayer('fenceFL').graphics)
+											
 												if(nextPt){
-													console.log(nextPt)
-													var vSDistanceC = gEngine.distance(nextPt, ptProj, "miles");
-													//var vSDistanceCMiles = gEngine.distance(nextPt, ptProj, "miles");							
+						
+													var vSDistanceC = gEngine.distance(nextPt, ptProj, "miles");																		
 													if (vSDistanceC <= 0.15) {
 														vSDistanceC = (vSDistanceC * 5280).toFixed(0);
 														vSDistanceC = Math.round(vSDistanceC / 10) * 10;
@@ -564,8 +480,10 @@ define(["esri/layers/FeatureLayer", "esri/tasks/query",
 													text=text.replace("In,","");
 												}
 			
-												console.log("test");
-											} else {
+											
+											} 
+											//calculate the current distance between car and next feature turn for A and B type fences, and handle  text to speak
+											else {
 												var vSDistance = gEngine.distance(feature.attributes.turnPt, ptProj, "miles");
 												if (vSDistance <= 0.15) {
 													vSDistance = (vSDistance * 5280).toFixed(0);
@@ -590,6 +508,7 @@ define(["esri/layers/FeatureLayer", "esri/tasks/query",
 												cancelable: false
 											});
 											dom.byId("synthPane").innerHTML = (window.directions).toUpperCase();
+											//remove the feature from the fence layer
 											mobileMap.map.getLayer('fenceFL').remove(feature)
 			
 			
@@ -599,11 +518,10 @@ define(["esri/layers/FeatureLayer", "esri/tasks/query",
 												mobileMap.map.getLayer('turnsGL').clear();
 												mobileNav.clearWatchLocation();
 											}
-										}
-			
+										}			
 			
 									} catch (e) {
-			
+										console.log(e)			
 									}
 								});
 							}, null, {

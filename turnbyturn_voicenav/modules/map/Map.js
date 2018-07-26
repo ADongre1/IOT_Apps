@@ -13,10 +13,10 @@ define(["esri/geometry/Polygon","dojo/_base/declare",'esri/map',"esri/SpatialRef
 			zoom: 12,
 			spatialReference:this._esriNCSP,
 		}),
-		routeParcelQueryTask: new QueryTask("https://arcgis2.catawbacountync.gov/arcgis/rest/services/catawba/Centerlines_Network/MapServer/18"),
-		addQueryTask:new QueryTask("https://arcgis2.catawbacountync.gov/arcgis/rest/services/catawba/address_pts/MapServer/0"),
-		parcelQueryTask: new QueryTask('https://arcgis2.catawbacountync.gov/arcgis/rest/services/public_access/Basemap_pa/MapServer/4'),
-		clQueryTask: new QueryTask('https://arcgis2.catawbacountync.gov/arcgis/rest/services/catawba/Centerlines_Network/MapServer/8'),
+		routeParcelQueryTask: new QueryTask("routing parcels"),
+		addQueryTask:new QueryTask("addresses"),
+		parcelQueryTask: new QueryTask('parcels query'),
+		clQueryTask: new QueryTask('routing centerline query'),
 		Query:function(){return new Query()},
 		//acccess these variables through map
 		_turnSymbol:new SimpleMarkerSymbol(
@@ -34,7 +34,7 @@ define(["esri/geometry/Polygon","dojo/_base/declare",'esri/map',"esri/SpatialRef
 	    },
 	    constructor: function(){
 	    	this.map.addLayer(new ArcGISDynamicMapServiceLayer('https://arcgis2.catawbacountync.gov/arcgis/rest/services/catawba/Basemap/MapServer',{id:'Basemap'}));
-	    	this.map.addLayer(new ArcGISDynamicMapServiceLayer('https://arcgis2.catawbacountync.gov/arcgis/rest/services/DSS/MOW/MapServer',{id:'Depots'}));
+	    	this.map.addLayer(new ArcGISDynamicMapServiceLayer('MOW rest endpoint',{id:'Depots'}));
 	    	this.map.getLayer("Depots").setVisibleLayers([1]);
 	    	this.map.addLayer(new GraphicsLayer({id:'destGL'}));	    	
 	    	this.map.addLayer(new FeatureLayer({layerDefinition:{"geometryType": "esriGeometryPolyline","objectIdField": "ObjectID","fields": [{
@@ -42,12 +42,9 @@ define(["esri/geometry/Polygon","dojo/_base/declare",'esri/map',"esri/SpatialRef
 	            "alias": "ObjectID",
 	            "type": "esriFieldTypeOID"
 	          }]},featureSet:null},{id:'routeFL'}));
-	    	//this.map.addLayer(new GraphicsLayer({id:'routeGL'}));
+	    
 	    	this.map.addLayer(new GraphicsLayer({id:"turnsGL"}));
-//	    	var tempFenceFL = new FeatureLayer("https://arcgis2.catawbacountync.gov/arcgis/rest/services/DSS/MOW/MapServer/30",{mode: FeatureLayer.MODE_ONDEMAND,
-//	    		mode: FeatureLayer.MODE_ONDEMAND,
-//	    	outFields: ["*"]})
-//	    	console.log(tempFenceFL)
+			  // in memory fence layer
 	    	this.map.addLayer(new FeatureLayer({layerDefinition:{
     			"geometryType":"esriGeometryPolygon",
     			"objectIdField":"ObjectID",
@@ -79,15 +76,7 @@ define(["esri/geometry/Polygon","dojo/_base/declare",'esri/map',"esri/SpatialRef
     	}},{id:'fenceFL'}));
 			this.map.getLayer('fenceFL').setEditable(true)
 			var map = this.map;
-			this.map.getLayer('fenceFL').on("click",function(feature){
-				console.log(feature.graphic.attributes)
-				map.getLayer('fenceFL').applyEdits(null,null,[feature.graphic]);				
-				if (feature.graphic.attributes.directions.indexOf("have arrived") > 0) {
-					mobileMap.map.getLayer('fenceFL').clear();
-					mobileMap.map.getLayer('turnsGL').clear();
-				}
-		
-			})
+	
 			this.map.on("dbl-click", function () {
 				map.setExtent(graphicsUtils.graphicsExtent(mobileMap.map.getLayer('routeFL').graphics).expand(1.25), true);
 			});
