@@ -94,7 +94,7 @@ timer.on("poll",function(){
   var date=dateTime.substr(0,10);
   timeDate.setSeconds(timeDate.getSeconds()-2);
   var time=timeDate.toTimeString().substr(0,9);
-  var msgSwitchReadQuery = "SELECT MobileLogin,Lat,Long,Time,Speed,DateCreated from CAT_MobileAVLLog (NOLOCK) where DateCreated='"+date+"' and TimeCreated>='"+time+"' and MobileLogin IN ('3M1','3M2','3M3','3M4','3M5','3M6','3M7','3M8','3M9','3M10','3M11','3M12','3M42','3M45','3M46') and Speed <100";
+  var msgSwitchReadQuery = "SELECT MobileLogin,Lat,Long,Time,Speed,DateCreated from table (NOLOCK) where DateCreated='"+date+"' and TimeCreated>='"+time+"' and MobileLogin IN (list of units) and Speed <100";
   //console.log(date+" "+time)
   new mssql.Request(msgSwitchReadConn).query(msgSwitchReadQuery,function(err,result){
     //console.log(result)
@@ -114,7 +114,7 @@ timer.on("poll",function(){
 //on websocket connection check user credentials update connection count and send intial car/incident info and when message is sent from client
 wss.on('connection', function(ws) {
   //console.log("connected")
-  fs.readFile("C:\\avlWS\\userTokens.txt", {encoding: 'utf-8'}, function(err,data){
+  fs.readFile("tokenJSONTextFile", {encoding: 'utf-8'}, function(err,data){
     var soiJSON = JSON.parse(data);
     for(user in soiJSON){
         userJSON[user]=soiJSON[user];
