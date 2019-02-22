@@ -98,7 +98,7 @@ mobileMap= ''
 		var srProj= new SpatialReference(102719);
 		//Map() references the map module not ESRI MAP
 		mobileMap = new Map();
-		var mowService = new ArcGISDynamicMapServiceLayer("meals on wheel map service for map display",{id:"mowService"})
+		var mowService = new ArcGISDynamicMapServiceLayer("mow_server",{id:"mowService"})
 
 		//sets cookies
 		mowService.on("load",function(){

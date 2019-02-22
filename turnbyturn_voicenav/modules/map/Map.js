@@ -22,10 +22,10 @@ define(["esri/geometry/Polygon","dojo/_base/declare",'esri/map',"esri/SpatialRef
 		_turnSymbol:new SimpleMarkerSymbol(
 	            SimpleMarkerSymbol.STYLE_CIRCLE, 13,
 	            new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, new Color([178,34,34]), 1),new Color([0,255,0])),
-	    _destSymbol:new PMS ('https://arcgis2.catawbacountync.gov/dss/mow/mobile/house.jpg',25,25),
+	    _destSymbol:new PMS ('house',25,25),
 	    _destTextSymbol: new TextSymbol(null,new Font("9pt", Font.STYLE_NORMAL,Font.VARIANT_NORMAL, Font.WEIGHT_BOLD,"Serif"),
 	    			null).setHaloSize(2.5).setHaloColor(new Color([255,255,255])).setColor(new Color([0,0,255])),
-		_carSymbol:new PMS ('https://arcgis2.catawbacountync.gov/dss/mow/mobile/car.png',45,30),
+		_carSymbol:new PMS ('car',45,30),
 	       	    
 	    _esriNCSP:new SpatialReference(102719),
 	    getBlankPoint:function(){
@@ -33,7 +33,7 @@ define(["esri/geometry/Polygon","dojo/_base/declare",'esri/map',"esri/SpatialRef
 	    	return tempPoint;
 	    },
 	    constructor: function(){
-	    	this.map.addLayer(new ArcGISDynamicMapServiceLayer('https://arcgis2.catawbacountync.gov/arcgis/rest/services/catawba/Basemap/MapServer',{id:'Basemap'}));
+	    	this.map.addLayer(new ArcGISDynamicMapServiceLayer('...MapServer',{id:'Basemap'}));
 	    	this.map.addLayer(new ArcGISDynamicMapServiceLayer('MOW rest endpoint',{id:'Depots'}));
 	    	this.map.getLayer("Depots").setVisibleLayers([1]);
 	    	this.map.addLayer(new GraphicsLayer({id:'destGL'}));	    	
@@ -73,7 +73,7 @@ define(["esri/geometry/Polygon","dojo/_base/declare",'esri/map',"esri/SpatialRef
     				"alias":"directions",
     				"type":"esriFieldTypeString"
     			}]
-    	}},{id:'fenceFL'}));
+    			}},{id:'fenceFL'}));
 			this.map.getLayer('fenceFL').setEditable(true)
 			var map = this.map;
 	
